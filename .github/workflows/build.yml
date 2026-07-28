@@ -52,6 +52,22 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
+      # The repository tracks skills/officecli/SKILL.md as a symlink to the
+      # canonical root SKILL.md. Windows checkout materializes the link target
+      # as a tiny text file unless symlink creation is enabled, which would
+      # otherwise embed that placeholder in the single-file executable.
+      - name: Materialize OfficeCLI skill payload (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $skillPath = 'skills/officecli/SKILL.md'
+          if ((Get-Item -LiteralPath $skillPath).Length -lt 1024) {
+            Copy-Item -LiteralPath 'SKILL.md' -Destination $skillPath -Force
+          }
+          if ((Get-Item -LiteralPath $skillPath).Length -lt 1024) {
+            throw 'OfficeCLI skill payload was not materialized.'
+          }
+
       - name: Publish
         run: dotnet publish src/officecli/officecli.csproj -c Release -r ${{ matrix.rid }} -o publish --nologo
 
@@ -64,7 +80,7 @@ jobs:
           fi
 
       - name: Setup macOS code signing
-        if: startsWith(matrix.rid, 'osx-')
+        if: startsWith(matrix.rid, 'osx-') && github.repository == 'iOfficeAI/OfficeCLI'
         env:
           BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
           P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
@@ -84,7 +100,7 @@ jobs:
           rm -f "$CERT_PATH"
 
       - name: Codesign (macOS)
-        if: startsWith(matrix.rid, 'osx-')
+        if: startsWith(matrix.rid, 'osx-') && github.repository == 'iOfficeAI/OfficeCLI'
         run: |
           IDENTITY=$(security find-identity -v -p codesigning | grep "Developer ID Application" | head -n 1 | sed -E 's/.*"(.+)"/\1/')
           echo "Signing with: $IDENTITY"
@@ -100,7 +116,7 @@ jobs:
           codesign -d --entitlements - --xml publish/${{ matrix.name }} | grep -q allow-jit
 
       - name: Notarize (macOS)
-        if: startsWith(matrix.rid, 'osx-')
+        if: startsWith(matrix.rid, 'osx-') && github.repository == 'iOfficeAI/OfficeCLI'
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APP_SPECIFIC_PASSWORD: ${{ secrets.APP_SPECIFIC_PASSWORD }}
