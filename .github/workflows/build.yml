@@ -61,10 +61,12 @@ jobs:
         shell: pwsh
         run: |
           $skillPath = 'skills/officecli/SKILL.md'
-          if ((Get-Item -LiteralPath $skillPath).Length -lt 1024) {
+          $skillContent = Get-Content -LiteralPath $skillPath -Raw
+          if ($skillContent.Length -lt 1024) {
             Copy-Item -LiteralPath 'SKILL.md' -Destination $skillPath -Force
           }
-          if ((Get-Item -LiteralPath $skillPath).Length -lt 1024) {
+          $skillContent = Get-Content -LiteralPath $skillPath -Raw
+          if ($skillContent.Length -lt 1024) {
             throw 'OfficeCLI skill payload was not materialized.'
           }
 
